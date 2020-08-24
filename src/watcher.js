@@ -1,5 +1,6 @@
 const api = require('./utils/api');
 const debug = require('./utils/debug');
+const settings = require('./settings');
 const twitch = require('./utils/twitch');
 const SafeEventEmitter = require('./utils/safe-event-emitter');
 const $ = require('jquery');
@@ -11,7 +12,6 @@ const CHAT_SQUAD_WRAPPER = 'div[data-test-selector="chat-wrapper"]';
 
 let router;
 let currentPath = '';
-let currentRoute = '';
 let chatWatcher;
 let vodChatWatcher;
 let clipsChatWatcher;
@@ -20,9 +20,11 @@ let currentChatReference;
 let currentChatChannelId;
 let currentChannelId;
 let channel = {};
+let followedChannelsWatcher;
 
 const loadPredicates = {
     following: () => !!$('.tw-tabs div[data-test-selector="ACTIVE_TAB_INDICATOR"]').length,
+    live: () => !!String($('.tw-tab__link--active').attr('href')).endsWith('live') && !!$('.live-channel-card').length,
     channel: () => {
         const href = (
             $('.channel-header__user-avatar img').attr('src') ||
@@ -175,6 +177,9 @@ class Watcher extends SafeEventEmitter {
         this.chatObserver();
         this.vodChatObserver();
         this.routeObserver();
+        if (settings.get('showRerunsCategory')) {
+            this.followingChannelsObserver();
+        }
         this.squadChatObserver();
 
         require('./watchers/*.js', {mode: (base, files) => {
@@ -200,7 +205,6 @@ class Watcher extends SafeEventEmitter {
     routeObserver() {
         const onRouteChange = location => {
             const lastPath = currentPath;
-            const lastRoute = currentRoute;
             const path = location.pathname;
             const route = getRouteFromPath(path);
 
@@ -210,12 +214,10 @@ class Watcher extends SafeEventEmitter {
             this.emit('load');
 
             currentPath = path;
-            currentRoute = route;
             if (currentPath === lastPath) return;
 
             switch (route) {
                 case routes.DIRECTORY_FOLLOWING:
-                    if (lastRoute === routes.DIRECTORY_FOLLOWING_LIVE) break;
                     this.waitForLoad('following').then(() => this.emit('load.directory.following'));
                     break;
                 case routes.CHAT:
@@ -239,6 +241,9 @@ class Watcher extends SafeEventEmitter {
                     break;
                 case routes.DASHBOARD:
                     this.waitForLoad('chat').then(() => this.emit('load.chat'));
+                    break;
+                case routes.DIRECTORY_FOLLOWING_LIVE:
+                    this.waitForLoad('live').then(() => this.emit('load.directory.live'));
                     break;
             }
         };
@@ -405,6 +410,73 @@ class Watcher extends SafeEventEmitter {
         this.on('load.channel', updateChannel);
         this.on('load.chat', updateChannel);
         this.on('load.vod', updateChannel);
+    }
+
+    followingChannelsObserver() {
+        const observe = (watcher, element) => {
+            if (!element) return;
+            if (watcher) watcher.disconnect();
+            watcher.observe(element, {childList: true});
+        };
+
+        const bannedWords = ['rerun', 'rebroadcast', 'vodcast'];
+
+        const CHANNEL_HEADING_SELECTOR = 'a.tw-link > h3';
+        const CHANNEL_PLACEHOLDER_SELECTOR = '.tw-tower__placeholder';
+        const CHANNELS_CONTAINER_SELECTOR = '.tw-tower';
+        const RERUNS_SELECTOR = '#bttv-reruns';
+        const RERUN_BADGE_SELECTOR = '.stream-type-indicator--rerun';
+
+
+        followedChannelsWatcher = new window.MutationObserver(mutations => {
+            mutations.forEach(mutation => {
+                if (mutation.type !== 'childList') return;
+
+                if (mutation.addedNodes) {
+                    mutation.addedNodes.forEach(parent => {
+                        const $channel = $(parent);
+                        const hasRerunBadge = $channel.find(RERUN_BADGE_SELECTOR).length;
+                        let $el;
+
+                        if (hasRerunBadge) {
+                            $el = $channel.detach();
+                        } else {
+                            const title = String($channel.find(CHANNEL_HEADING_SELECTOR).attr('title'));
+                            const hasBannedWord = bannedWords.some(word => title.toLocaleLowerCase().includes(word));
+
+                            if (hasBannedWord) {
+                                $el = $channel.detach();
+                            }
+                        }
+
+                        let $reruns = $(RERUNS_SELECTOR);
+
+                        if (!$reruns.length) {
+                            $channel.parent().parent().after(`<div>
+                              <div class="tw-mg-b-2"><h4 class="tw-c-text-base tw-strong">Reruns</h4></div>
+                              <div id="bttv-reruns" class="tw-flex-wrap tw-tower tw-tower--300 tw-tower--gutter-sm"></div>
+                            </div>`);
+
+                            $reruns = $(RERUNS_SELECTOR);
+                        }
+
+                        if ($el && !!$reruns.length) {
+                            const placeholder = $(CHANNEL_PLACEHOLDER_SELECTOR).first();
+
+                            for (let i = 0; i < 3; i++) {
+                                placeholder.clone().appendTo($reruns);
+                            }
+
+                            $el.appendTo($reruns);
+                        }
+                    });
+                }
+            });
+        }
+        );
+
+        this.on('load.directory.live', () => observe(followedChannelsWatcher, $(CHANNELS_CONTAINER_SELECTOR)[0]));
+        this.on('load.directory.following', () => observe(followedChannelsWatcher, $(CHANNELS_CONTAINER_SELECTOR)[0]));
     }
 
     clipsChatObserver() {
