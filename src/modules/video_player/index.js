@@ -8,6 +8,7 @@ const debounce = require('lodash.debounce');
 const VIDEO_PLAYER_SELECTOR = '.video-player__container';
 const CANCEL_VOD_RECOMMENDATION_SELECTOR = '.recommendations-overlay .pl-rec__cancel.pl-button, .autoplay-vod__content-container button';
 const BTTV_PICTURE_IN_PICTURE_SELECTOR = '#bttv-picture-in-picture';
+const BTTV_THEATRE_IN_FULLSCREEN_SELECTOR = '#bttv-theatre-in-fullscreen';
 
 const getPictureInPictureTemplate = toggled => `
     <div id="bttv-picture-in-picture" class="tw-inline-flex tw-relative tw-tooltip__container">
@@ -24,6 +25,28 @@ const getPictureInPictureTemplate = toggled => `
             </span>
         </button>
         <div class="tw-tooltip tw-tooltip--align-right tw-tooltip--up" data-a-target="tw-tooltip-label" role="tooltip">Picture in Picture</div>
+    </div>
+`;
+
+const getTheatreInFullscreenTemplate = toggled => `
+    <div id="bttv-theatre-in-fullscreen" class="tw-inline-flex tw-relative tw-tooltip-wrapper">
+        <button class="tw-align-items-center tw-align-middle tw-border-bottom-left-radius-medium tw-border-bottom-right-radius-medium tw-border-top-left-radius-medium tw-border-top-right-radius-medium tw-button-icon tw-button-icon--overlay tw-core-button tw-core-button--overlay tw-inline-flex tw-interactive tw-justify-content-center tw-overflow-hidden tw-relative" aria-label="Picture in Picture">
+            <span class="tw-button-icon__icon">
+                <div style="width: 2rem; height: 2rem;">
+                    <div class="tw-align-items-center tw-full-width tw-icon tw-icon--fill tw-inline-flex">
+                        <div class="tw-aspect tw-aspect--align-top">
+                            <div class="tw-aspect__spacer"></div>
+                            <svg class="tw-icon__svg" width="100%" height="100%" version="1.1" viewBox="0 0 20 20" x="0px" y="0px">
+                                ${toggled ? '<path d="M8 8V3H6v3H2v2h6zM12 8h6V6h-4V3h-2v5zM12 17v-5h6v2h-4v3h-2zM8 12H2v2h4v3h2v-5z"/>' : '<path d="M7 3H2v5h2V5h3V3zM18 8V3h-5v2h3v3h2zM13 17v-2h3v-3h2v5h-5zM4 12H2v5h5v-2H4v-3z" /><path d="M10,0 L10,20 Z" stroke="currentColor" stroke-width="2"/>'}
+                            </svg>
+                        </div> 
+                    </div>
+                </div>
+            </span>
+        </button>
+        <div class="tw-tooltip tw-tooltip--align-right tw-tooltip--up" data-a-target="tw-tooltip-label" role="tooltip">
+            ${toggled ? 'Exit Fullscreen (f)' : 'Theatre Mode in Fullscreen'}
+        </div>
     </div>
 `;
 
@@ -108,6 +131,19 @@ function togglePictureInPicture() {
     }
 }
 
+function toggleTheatreInFullscreen() {
+    const video = $(VIDEO_PLAYER_SELECTOR).find('video')[0];
+    if (!video) return;
+
+    if (document.fullscreenElement) {
+        document.exitFullscreen();
+    } else {
+        const $theatreButton = $(VIDEO_PLAYER_SELECTOR).find('[data-a-target="player-theatre-mode-button"]');
+        $theatreButton.trigger('click');
+        document.body.requestFullscreen();
+    }
+}
+
 class VideoPlayerModule {
     constructor() {
         watcher.on('load.player', () => {
@@ -115,6 +151,7 @@ class VideoPlayerModule {
             watchPlayerRecommendationVodsAutoplay();
             this.loadVolumeScrollControl();
             this.loadPictureInPicture();
+            this.loadTheatreInFullscreen();
         });
         settings.add({
             id: 'hidePlayerExtensions',
@@ -199,6 +236,30 @@ class VideoPlayerModule {
         const $button = $(getPictureInPictureTemplate(false));
 
         $anchor.on('click', BTTV_PICTURE_IN_PICTURE_SELECTOR, togglePictureInPicture);
+        $button.insertAfter($settingsButton);
+    }
+
+    loadTheatreInFullscreen() {
+        if (!document.fullscreenEnabled || $(BTTV_THEATRE_IN_FULLSCREEN_SELECTOR).length > 0) return;
+
+        const video = $(VIDEO_PLAYER_SELECTOR).find('video')[0];
+        if (!video) return;
+
+        document.addEventListener('fullscreenchange', () => {
+            const $button = $(BTTV_THEATRE_IN_FULLSCREEN_SELECTOR);
+
+            if (!document.fullscreenElement) {
+                $button.replaceWith(getTheatreInFullscreenTemplate(false));
+            } else {
+                $button.replaceWith(getTheatreInFullscreenTemplate(true));
+            }
+        });
+
+        const $anchor = $('.player-controls__right-control-group');
+        const $settingsButton = $anchor.children('div').children('div.settings-menu-button-component').parent();
+        const $button = $(getTheatreInFullscreenTemplate(false));
+
+        $anchor.on('click', BTTV_THEATRE_IN_FULLSCREEN_SELECTOR, toggleTheatreInFullscreen);
         $button.insertAfter($settingsButton);
     }
 }

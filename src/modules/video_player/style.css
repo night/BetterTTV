@@ -10,6 +10,6 @@
   }
 }
 
-#bttv-picture-in-picture svg {
+#bttv-picture-in-picture svg, #bttv-theatre-in-fullscreen svg {
   fill: currentColor;
 }
