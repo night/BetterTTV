@@ -1,8 +1,10 @@
 const $ = require('jquery');
 const watcher = require('../../watcher');
 const twitch = require('../../utils/twitch');
+const settings = require('../../settings');
+const cdn = require('../../utils/cdn');
 
-const STRAWPOLL_REGEX = /strawpoll\.me\/([0-9]+)/g;
+const STRAWPOLL_REGEX = /strawpoll\.me\/([0-9]+)/;
 
 const pollTemplate = pollId => `
     <div id="bttv-poll-contain">
@@ -17,6 +19,9 @@ const pollTemplate = pollId => `
                       fill-rule="evenodd" />
             </svg>
         </div>
+        <div class="poll-time-bar">
+            <div></div>
+        </div>
         <iframe class="frame" src="https://www.strawpoll.me/embed_1/${pollId}"></iframe>
     </div>
 `;
@@ -27,6 +32,25 @@ let lastPollId = null;
 class ChatEmbeddedPollModule {
     constructor() {
         watcher.on('chat.message', ($el, messageObj) => this.onChat($el, messageObj));
+
+        settings.add({
+            id: 'pollAlert',
+            name: 'Poll Notification',
+            description: 'Plays a sound when a new poll appears in chat',
+            defaultValue: false
+        });
+
+        this.sound = null;
+        this.handleAlertSound = this.handleAlertSound.bind(this);
+    }
+
+    handleAlertSound() {
+        if (!this.sound) {
+            this.sound = new Audio(cdn.url('assets/sounds/poll-alert.ogg'));
+        }
+        this.sound.pause();
+        this.sound.currentTime = 0;
+        this.sound.play();
     }
 
     onChat($el, messageObj) {
@@ -61,10 +85,15 @@ class ChatEmbeddedPollModule {
         });
         $poll.children('.title').on('click', () => {
             $poll.children('.frame').show();
+            $poll.children('.poll-time-bar').remove();
             $poll.children('.title').text('Thanks!');
             $poll.css('height', '450px');
         });
         $poll.slideDown(200);
+
+        if (settings.get('pollAlert')) {
+            this.handleAlertSound();
+        }
 
         lastPollId = pollId;
     }
