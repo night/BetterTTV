@@ -14,10 +14,10 @@ const REPEATING_SPACE_REGEX = /\s\s+/g;
 
 const BLACKLIST_KEYWORD_PROMPT = `Type some blacklist keywords. Messages containing keywords will be filtered from your chat.
 
-Use spaces in the field to specify multiple keywords. Place {} around a set of words to form a phrase, <> inside the {} to use exact search, and () around a single word to specify a username. Wildcards (*) are supported.`;
+Use spaces in the field to specify multiple keywords. Place {} around a set of words to form a phrase, <> inside the {} to use exact search, and () around a single word to specify a username. '$@' for all mentions, '$#' for all emotes, 'http*' for all links. Wildcards (*) are supported.`;
 const HIGHLIGHT_KEYWORD_PROMPT = `Type some highlight keywords. Messages containing keywords will turn red to get your attention.
 
-Use spaces in the field to specify multiple keywords. Place {} around a set of words to form a phrase, <> inside the {} to use exact search, and () around a single word to specify a username. Wildcards (*) are supported.`;
+Use spaces in the field to specify multiple keywords. Place {} around a set of words to form a phrase, <> inside the {} to use exact search, and () around a single word to specify a username. '$@' for all mentions, '$#' for all emotes, 'http*' for all links. Wildcards (*) are supported.`;
 
 const CHAT_LIST_SELECTOR = '.chat-list .chat-scrollable-area__message-container,.chat-list--default .chat-scrollable-area__message-container,.chat-list--other .chat-scrollable-area__message-container';
 const VOD_CHAT_FROM_SELECTOR = '.video-chat__message-author';
@@ -144,6 +144,14 @@ function messageContainsKeyword(keywords, from, message) {
     return false;
 }
 
+function hasEmote($message) {
+    return $message.find('img').hasClass('chat-line__message--emote');
+}
+
+function isMention($message) {
+    return $message.find('span').hasClass('mention-fragment');
+}
+
 function isReply($message) {
     return $message.parent().hasClass('chat-input-tray__open');
 }
@@ -235,7 +243,14 @@ class ChatHighlightBlacklistKeywordsModule {
             return this.markBlacklisted($message);
         }
 
-        if (fromContainsKeyword(highlightUsers, from) || messageContainsKeyword(highlightKeywords, from, message)) {
+        if ((blacklistKeywords.includes('$@') && isMention($message)) || (blacklistKeywords.includes('$#') && hasEmote($message))) {
+            return this.markBlacklisted($message);
+        }
+
+        if (fromContainsKeyword(highlightUsers, from) ||
+        messageContainsKeyword(highlightKeywords, from, message) ||
+        (highlightKeywords.includes('$@') && isMention($message)) ||
+        (highlightKeywords.includes('$#') && hasEmote($message))) {
             this.markHighlighted($message);
 
             if (isReply($message)) return;
@@ -256,6 +271,14 @@ class ChatHighlightBlacklistKeywordsModule {
 
         if (fromContainsKeyword(blacklistUsers, from) || messageContainsKeyword(blacklistKeywords, from, messageContent)) {
             return this.markBlacklisted($message);
+        }
+
+        if ((blacklistKeywords.includes('$@') && isMention($message)) || (blacklistKeywords.includes('$#') && hasEmote($message))) {
+            return this.markBlacklisted($message);
+        }
+
+        if ((highlightKeywords.includes('$@') && isMention($message)) || (highlightKeywords.includes('$#') && hasEmote($message))) {
+            return this.markHighlighted($message);
         }
 
         if (fromContainsKeyword(highlightUsers, from) || messageContainsKeyword(highlightKeywords, from, messageContent)) {
