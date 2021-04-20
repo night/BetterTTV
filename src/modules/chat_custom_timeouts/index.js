@@ -2,6 +2,7 @@ const $ = require('jquery');
 const watcher = require('../../watcher');
 const keyCodes = require('../../utils/keycodes');
 const twitch = require('../../utils/twitch');
+const settings = require('../../settings');
 
 const CHAT_ROOM_SELECTOR = 'section[data-test-selector="chat-room-component-layout"]';
 const CHAT_LINE_SELECTOR = '.chat-line__message';
@@ -149,10 +150,26 @@ function handleClick(e) {
 
 class ChatCustomTimeoutsModule {
     constructor() {
+        settings.add({
+            id: 'chatCustomTimeouts',
+            name: 'Chat Custom Timeouts',
+            defaultValue: true,
+            description: 'Enables a right click timeout slider for chat moderators'
+        });
+
+        settings.on('changed.chatCustomTimeouts', () => this.loadClickHandler());
         watcher.on('load.chat', () => this.loadClickHandler());
     }
 
     loadClickHandler() {
+        if (settings.get('chatCustomTimeouts') === false) {
+            $(CHAT_ROOM_SELECTOR)
+                .off('contextmenu', CHAT_LINE_USERNAME_SELECTOR, handleClick)
+                .off('click', handleTimeoutClick);
+
+            return;
+        }
+
         $(CHAT_ROOM_SELECTOR)
             .off('contextmenu', CHAT_LINE_USERNAME_SELECTOR, handleClick)
             .on('contextmenu', CHAT_LINE_USERNAME_SELECTOR, handleClick)
