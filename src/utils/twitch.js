@@ -420,6 +420,36 @@ module.exports = {
         return currentUser.id === currentChannel.id;
     },
 
+    getChannelHostingContext() {
+        let channelHostingContext;
+
+        try {
+            const node = searchReactChildren(
+                getReactInstance($(REACT_ROOT)[0]),
+                n => n.stateNode && n.stateNode.handleStreamChatRoomHostTargetChange,
+                1000
+            );
+            channelHostingContext = node.stateNode;
+        } catch (_) {}
+
+        return channelHostingContext;
+    },
+
+    getChannelRaidContext(element) {
+        let raidContext;
+
+        try {
+            const node = searchReactChildren(
+                getReactInstance(element),
+                n => n.stateNode && n.stateNode.props && n.stateNode.props.hasJoined,
+                1000
+            );
+            raidContext = node.stateNode.props;
+        } catch (_) {}
+
+        return raidContext;
+    },
+
     setInputValue($inputField, msg, focus = false) {
         $inputField.val(msg);
         const inputField = $inputField[0];
