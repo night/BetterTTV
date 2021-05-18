@@ -2,9 +2,11 @@ import $ from 'jquery';
 import watcher from '../../watcher.js';
 import settings from '../../settings.js';
 import domObserver from '../../observers/dom.js';
+import twitch from '../../utils/twitch.js';
 
 let removeFeaturedChannelsListener;
 let removeOfflineFollowedChannelsListener;
+let sidebarNode;
 
 class HideSidebarElementsModule {
   constructor() {
@@ -47,15 +49,14 @@ class HideSidebarElementsModule {
   toggleFeaturedChannels() {
     if (settings.get('hideFeaturedChannels')) {
       if (removeFeaturedChannelsListener) return;
+      removeFeaturedChannelsListener = domObserver.on('.side-nav-section', (_, isConnected) => {
+        if (!isConnected) return;
 
-      removeFeaturedChannelsListener = domObserver.on(
-        '.side-nav-section a[data-test-selector="recommended-channel"], .side-nav-section a[data-test-selector="similarity-channel"], .side-nav-section .tw-svg__asset--navchannels, .side-nav-section a[data-test-selector="popular-channel"]',
-        (node, isConnected) => {
-          if (!isConnected) return;
-          $(node).addClass('bttv-hide-featured-channels');
-        },
-        {useParentNode: true}
-      );
+        sidebarNode = sidebarNode || twitch.getRecommendedSidebar();
+        if (!sidebarNode) return;
+
+        $(sidebarNode).addClass('bttv-hide-featured-channels');
+      });
       return;
     }
 
@@ -63,6 +64,7 @@ class HideSidebarElementsModule {
 
     removeFeaturedChannelsListener();
     removeFeaturedChannelsListener = undefined;
+    sidebarNode = undefined;
     $('.side-nav-section').removeClass('bttv-hide-featured-channels');
   }
 

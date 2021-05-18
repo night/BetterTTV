@@ -8,6 +8,7 @@ const CHAT_LIST = '.chat-list,.chat-list--default,.chat-list--other';
 const PLAYER = '.video-player__container';
 const CLIPS_BROADCASTER_INFO = '.clips-broadcaster-info';
 const CHAT_MESSAGE_SELECTOR = '.chat-line__message';
+const SIDEBAR_CONTENTS = '.side-bar-contents';
 
 const TMIActionTypes = {
   MESSAGE: 0,
@@ -186,6 +187,24 @@ export default {
     } catch (_) {}
 
     return store;
+  },
+
+  getRecommendedSidebar() {
+    let recommendedSidebar;
+    try {
+      const node = searchReactChildren(
+        getReactInstance($(SIDEBAR_CONTENTS)[0]),
+        (n) =>
+          n.stateNode &&
+          n.stateNode.DOMNode &&
+          n.stateNode.props &&
+          n.stateNode.props.section &&
+          n.stateNode.props.section.type === 'RECOMMENDED_SECTION',
+        30
+      );
+      recommendedSidebar = node.stateNode.DOMNode;
+    } catch (_) {}
+    return recommendedSidebar;
   },
 
   getClipsBroadcasterInfo() {
