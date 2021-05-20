@@ -23,6 +23,9 @@ const CHAT_SETTINGS_TEMPLATE = `
             <button class="setHighlightKeywords tw-pd-05 tw-block tw-border-radius-medium tw-full-width tw-interactable--default tw-interactable--hover-enabled tw-interactable tw-interactive">Set Highlight Keywords</button>
         </div>
         <div class="tw-full-width tw-relative">
+            <button class="setHiddenEmotes tw-pd-05 tw-block tw-border-radius-medium tw-full-width tw-interactable--default tw-interactable--hover-enabled tw-interactable tw-interactive">Set Hidden Emotes</button>
+        </div>
+        <div class="tw-full-width tw-relative">
             <button class="setFontFamily tw-pd-05 tw-block tw-border-radius-medium tw-full-width tw-interactable--default tw-interactable--hover-enabled tw-interactable tw-interactive">Set Font</button>
         </div>
         <div class="tw-full-width tw-relative">
@@ -113,6 +116,7 @@ class ChatSettingsModule {
 
     $settings.find('.setHighlightKeywords').click(highlightBlacklistKeywords.setHighlightKeywords);
     $settings.find('.setBlacklistKeywords').click(highlightBlacklistKeywords.setBlacklistKeywords);
+    $settings.find('.setHiddenEmotes').click(highlightBlacklistKeywords.setHiddenEmotes);
 
     $settings.find('.setFontFamily').click(chatFontSettings.setFontFamily);
     $settings.find('.setFontSize').click(chatFontSettings.setFontSize);
