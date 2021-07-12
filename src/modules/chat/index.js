@@ -71,6 +71,12 @@ function getMessagePartsFromMessageElement($message) {
 
 class ChatModule {
   constructor() {
+    settings.add({
+      id: 'colorMeCommand',
+      name: 'Colored /me Command',
+      defaultValue: false,
+      description: 'Restores original color and font style to the /me command',
+    });
     watcher.on('chat.message', ($element, message) => this.messageParser($element, message));
     watcher.on('channel.updated', ({bots}) => {
       channelBots = bots;
@@ -204,6 +210,11 @@ class ChatModule {
     const color = this.calculateColor(user.color);
     const $from = $element.find('.chat-author__display-name,.chat-author__intl-login');
     $from.css('color', color);
+
+    if (messageObj.messageType === 1 && settings.get('colorMeCommand') === true) {
+      const $chatline = $element.find('.chat-line__message-body--italicized');
+      $chatline.css({color, 'font-style': 'normal'});
+    }
 
     if (legacySubscribers.hasGlow(user.name) && settings.get('darkenedMode') === true) {
       const rgbColor = colors.getRgb(color);
