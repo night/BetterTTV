@@ -10,6 +10,7 @@ import emotes from '../emotes/index.js';
 import nicknames from '../chat_nicknames/index.js';
 import legacySubscribers from '../legacy_subscribers/index.js';
 import splitChat from '../split_chat/index.js';
+import globalBots from '../../utils/bots.js';
 
 const EMOTE_STRIP_SYMBOLS_REGEX = /(^[~!@#$%^&*()]+|[~!@#$%^&*()]+$)/g;
 const MENTION_REGEX = /^@([a-zA-Z\d_]+)$/;
@@ -52,7 +53,6 @@ function formatChatUser(message) {
 }
 
 const staff = new Map();
-const globalBots = ['nightbot', 'moobot'];
 let channelBots = [];
 let asciiOnly = false;
 let subsOnly = false;

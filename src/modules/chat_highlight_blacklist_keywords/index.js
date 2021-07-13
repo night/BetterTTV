@@ -7,17 +7,19 @@ import html from '../../utils/html.js';
 import twitch from '../../utils/twitch.js';
 import cdn from '../../utils/cdn.js';
 import {escapeRegExp} from '../../utils/regex.js';
+import globalBots from '../../utils/bots.js';
 
 const PHRASE_REGEX = /\{.+?\}/g;
 const USER_REGEX = /\(.+?\)/g;
+const ROLE_REGEX = /\[.+?\]/g;
 const REPEATING_SPACE_REGEX = /\s\s+/g;
 
 const BLACKLIST_KEYWORD_PROMPT = `Type some blacklist keywords. Messages containing keywords will be filtered from your chat.
 
-Use spaces in the field to specify multiple keywords. Place {} around a set of words to form a phrase, <> inside the {} to use exact search, and () around a single word to specify a username. Wildcards (*) are supported.`;
+Use spaces in the field to specify multiple keywords. Place {} around a set of words to form a phrase, <> inside the {} to use exact search, [] around a single word to specifiy a role, and () around a single word to specify a username. Wildcards (*) are supported.`;
 const HIGHLIGHT_KEYWORD_PROMPT = `Type some highlight keywords. Messages containing keywords will turn red to get your attention.
 
-Use spaces in the field to specify multiple keywords. Place {} around a set of words to form a phrase, <> inside the {} to use exact search, and () around a single word to specify a username. Wildcards (*) are supported.`;
+Use spaces in the field to specify multiple keywords. Place {} around a set of words to form a phrase, <> inside the {} to use exact search, [] around a single word to specifiy a role, and () around a single word to specify a username. Wildcards (*) are supported.`;
 
 const CHAT_LIST_SELECTOR =
   '.chat-list .chat-scrollable-area__message-container,.chat-list--default .chat-scrollable-area__message-container,.chat-list--other .chat-scrollable-area__message-container';
@@ -64,6 +66,7 @@ function changeKeywords(promptBody, storageID) {
 function computeKeywords(keywords) {
   const computedKeywords = [];
   const computedUsers = [];
+  const computedRoles = [];
 
   const phrases = keywords.match(PHRASE_REGEX);
   if (phrases) {
@@ -81,6 +84,14 @@ function computeKeywords(keywords) {
     });
   }
 
+  const roles = keywords.match(ROLE_REGEX);
+  if (roles) {
+    roles.forEach((role) => {
+      keywords = keywords.replace(role, '');
+      computedRoles.push(role.slice(1, -1).trim());
+    });
+  }
+
   keywords.split(' ').forEach((keyword) => {
     if (!keyword) return;
     computedKeywords.push(keyword);
@@ -89,28 +100,33 @@ function computeKeywords(keywords) {
   return {
     computedKeywords,
     computedUsers,
+    computedRoles,
   };
 }
 
 let loadTime = 0;
 let blacklistKeywords = [];
 let blacklistUsers = [];
+let blacklistRoles = [];
 function computeBlacklistKeywords() {
   let keywords = storage.get('blacklistKeywords');
   if (typeof keywords !== 'string') keywords = '';
 
-  const {computedKeywords, computedUsers} = computeKeywords(keywords);
+  const {computedKeywords, computedUsers, computedRoles} = computeKeywords(keywords);
   blacklistKeywords = computedKeywords;
   blacklistUsers = computedUsers;
+  blacklistRoles = computedRoles;
 }
 
 let highlightKeywords = [];
 let highlightUsers = [];
+let highlightRoles = [];
 function computeHighlightKeywords() {
   const keywords = defaultHighlightKeywords(storage.get('highlightKeywords'));
-  const {computedKeywords, computedUsers} = computeKeywords(keywords);
+  const {computedKeywords, computedUsers, computedRoles} = computeKeywords(keywords);
   highlightKeywords = computedKeywords;
   highlightUsers = computedUsers;
+  highlightRoles = computedRoles;
 }
 
 function wildcard(keyword) {
@@ -128,6 +144,14 @@ function keywordRegEx(keyword) {
 function fromContainsKeyword(keywords, from) {
   for (const user of keywords) {
     if (user.toLowerCase() !== from) continue;
+    return true;
+  }
+  return false;
+}
+
+function fromContainsRole(keywords, from) {
+  for (const role of keywords) {
+    if (!from.includes(role)) continue;
     return true;
   }
   return false;
@@ -172,11 +196,15 @@ function messageTextFromAST(ast) {
 }
 
 let $pinnedHighlightsContainer;
+let channelBots = [];
 
 class ChatHighlightBlacklistKeywordsModule {
   constructor() {
     watcher.on('load.chat', () => this.loadChat());
     watcher.on('load.vod', () => this.loadChat());
+    watcher.on('channel.updated', ({bots}) => {
+      channelBots = bots;
+    });
     watcher.on('chat.message', ($message, messageObj) => this.onMessage($message, messageObj));
     watcher.on('vod.message', ($message) => this.onVODMessage($message));
     storage.on('changed.blacklistKeywords', computeBlacklistKeywords);
@@ -234,17 +262,33 @@ class ChatHighlightBlacklistKeywordsModule {
     changeKeywords(HIGHLIGHT_KEYWORD_PROMPT, 'highlightKeywords');
   }
 
-  onMessage($message, {user, timestamp, messageParts}) {
+  onMessage($message, {user, timestamp, messageParts, badges}) {
     const from = user.userLogin;
     const message = messageTextFromAST(messageParts);
     const date = new Date(timestamp);
+    const fromBadges = Array.isArray(badges) ? badges.map((b) => b.id) : Object.keys(badges);
 
-    if (fromContainsKeyword(blacklistUsers, from) || messageContainsKeyword(blacklistKeywords, from, message)) {
+    if (
+      globalBots.includes(from) ||
+      (channelBots.includes(from) && Object.prototype.hasOwnProperty.call(badges, 'moderator'))
+    ) {
+      fromBadges.push('bot');
+    }
+
+    if (
+      fromContainsKeyword(blacklistUsers, from) ||
+      fromContainsRole(blacklistRoles, fromBadges) ||
+      messageContainsKeyword(blacklistKeywords, from, message)
+    ) {
       this.markBlacklisted($message);
       return;
     }
 
-    if (fromContainsKeyword(highlightUsers, from) || messageContainsKeyword(highlightKeywords, from, message)) {
+    if (
+      fromContainsKeyword(highlightUsers, from) ||
+      fromContainsRole(highlightRoles, fromBadges) ||
+      messageContainsKeyword(highlightKeywords, from, message)
+    ) {
       this.markHighlighted($message);
 
       if (isReply($message)) return;
