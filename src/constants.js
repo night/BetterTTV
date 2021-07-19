@@ -1,6 +1,7 @@
 export const SettingIds = {
   ANON_CHAT: 'anonChat',
   AUTO_THEATRE_MODE: 'autoTheatreMode',
+  AUTO_LEAVE_RAIDS: 'autoLeaveRaids',
   CHANNEL_POINTS: 'channelPoints',
   SPLIT_CHAT: 'splitChat',
   REVERSE_CHAT_DIRECTION: 'reverseChatDirection',
@@ -35,6 +36,7 @@ export const SettingIds = {
 export const LegacySettingIds = {
   ANON_CHAT: 'anonChat',
   AUTO_THEATRE_MODE: 'autoTheatreMode',
+  AUTO_LEAVE_RAIDS: 'autoLeaveRaids',
   AUTO_CLAIM_BONUS_CHANNEL_POINTS: 'autoClaimBonusChannelPoints',
   HIDE_CHANNEL_POINTS: 'hideChannelPoints',
   FFZ_EMOTES: 'ffzEmotes',
@@ -152,6 +154,7 @@ export const PageTypes = {
 export const DefaultValues = {
   [SettingIds.ANON_CHAT]: false,
   [SettingIds.AUTO_THEATRE_MODE]: false,
+  [SettingIds.AUTO_LEAVE_RAIDS]: false,
   [SettingIds.AUTO_CLAIM_BONUS_CHANNEL_POINTS]: false,
   [SettingIds.FFZ_EMOTES]: true,
   [SettingIds.BTTV_EMOTES]: true,
