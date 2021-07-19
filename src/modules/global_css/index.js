@@ -24,6 +24,15 @@ class GlobalCSSModule {
     settings.on(`changed.${SettingIds.DARKENED_MODE}`, (value) => this.setTwitchTheme(value));
 
     this.loadTwitchThemeObserver();
+
+    settings.add({
+      id: 'autoTheme',
+      name: 'Auto Theme',
+      defaultValue: false,
+      description: "Automatically matches Twitch's theme to the system's theme",
+    });
+    settings.on('changed.autoTheme', () => this.setAutoTheme());
+    this.setAutoTheme();
   }
 
   setTwitchTheme(value) {
@@ -37,6 +46,16 @@ class GlobalCSSModule {
       type: TWITCH_THEME_CHANGED_DISPATCH_TYPE,
       theme,
     });
+  }
+
+  setAutoTheme() {
+    if (!settings.get('autoTheme')) return;
+
+    const mt = window.matchMedia('(prefers-color-scheme: dark)');
+    mt.addEventListener('change', (event) => {
+      if (settings.get('autoTheme')) this.setTwitchTheme(event.matches);
+    });
+    this.setTwitchTheme(mt.matches);
   }
 
   loadTwitchThemeObserver() {
