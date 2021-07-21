@@ -194,7 +194,7 @@ export const DefaultValues = {
   [SettingIds.MUTE_INVISIBLE_PLAYER]: false,
   [SettingIds.SCROLL_VOLUME_CONTROL]: false,
   [SettingIds.BLACKLIST_KEYWORDS]: {},
-  [SettingIds.HIGHLIGHT_KEYWORDS]: {},
+  [SettingIds.HIGHLIGHT_KEYWORDS]: null,
   [SettingIds.SIDEBAR]:
     SidebarFlags.FRIENDS |
     SidebarFlags.OFFLINE_FOLLOWED_CHANNELS |

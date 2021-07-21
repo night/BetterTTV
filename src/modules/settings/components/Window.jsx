@@ -7,7 +7,6 @@ import DirectorySettings from '../pages/DirectorySettings.jsx';
 import ChannelSettings from '../pages/ChannelSettings.jsx';
 import Changelog from '../pages/Changelog.jsx';
 import ChatWindow from './ChatWindow.jsx';
-import {isPopout} from '../../../utils/window.js';
 import {PageTypes} from '../../../constants.js';
 
 function Page(props) {
@@ -28,7 +27,7 @@ function Page(props) {
   }
 }
 
-const validateModal = () => window.innerWidth < 600 && isPopout();
+const validateModal = () => window.innerWidth < 600 && window.location.pathname.endsWith('/chat');
 
 function Window({setHandleOpen}) {
   const [page, setPage] = useState(PageTypes.CHAT_SETTINGS);
